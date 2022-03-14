@@ -1,12 +1,10 @@
 import jieba.analyse
 import numpy as np
 
-
-
 class SimHash(object):
 
     def __init__(self):
-        pass
+        self.mark = 1
 
     def simHash(self, tokenized_text):
 
@@ -71,20 +69,32 @@ class SimHash(object):
         return length
 
     # 过滤重复新闻
-    def filter_duplicate(self, df):
-        mark = 1
+    def filter_duplicate(self, df, time_col):
+
         df["duplicate"] = 0
+        df[time_col] = df[time_col].apply(lambda x: x.split()[0])
 
         for i in range(len(df["simhash"])):
             hashstr1 = df["simhash"].iloc[i]
+            year1, month1, date1 = self.time_calculate(df[time_col].iloc[i])
             for j in range(i+1, len(df["simhash"])):
                 hashstr2 = df["simhash"].iloc[j]
-                if self.getDistance(hashstr1, hashstr2)<3:
+                year2, month2, date2 = self.time_calculate(df[time_col].iloc[j])
+                if self.getDistance(hashstr1, hashstr2) < 3 and year1 == year2 and month1 == month2 and abs(date1 - date2) < 3:
                     if df["duplicate"].iloc[i] != 0:
                         df["duplicate"].iloc[j] = df["duplicate"].iloc[i]
                     else:
-                        df["duplicate"].iloc[i] = mark
-                        df["duplicate"].iloc[j] = mark
-                        mark += 1
+                        df["duplicate"].iloc[i] = self.mark
+                        df["duplicate"].iloc[j] = self.mark
+                        self.mark += 1
 
         return df
+
+    def time_calculate(self, time):
+        # 切分字符可能要更改
+        time_split = time.split("/")
+        year = int(time_split[0])
+        month = int(time_split[1])
+        date = int(time_split[2])
+
+        return year, month, date

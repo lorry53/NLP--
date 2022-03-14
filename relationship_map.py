@@ -8,15 +8,26 @@ import networkx as nx
 # 生成公司关系图谱
 class company_relationship(object):
 
-    def __init__(self, df):
+    def __init__(self, df, name_list=None, type = 0):
         self.df_copy = df.copy(deep = True)
+        self.competitor_name = []
 
         # 获取战略客户列表
         self.client_name = pd.read_csv("data_source/客户全称&简称.csv")
-        self.name_dict = dict(zip(self.client_name["全称"].tolist(), self.client_name["简称"].tolist()))
+        if name_list==None:
+            self.name_dict = dict(zip(self.client_name["全称"].tolist(), self.client_name["简称"].tolist()))
+        else:
+            self.name_dict = name_list
+
+        with open(r"data_source/竞争对手.txt", "r", encoding='UTF-8') as f:
+            for line in f.readlines():
+                self.competitor_name.append(line.strip('\n'))
 
         # 公司关系图谱字典
         self.relations = {}
+
+        # type = 0绘制客户之间关系图谱，type=1绘制客户进而竞争对手之间关系图谱
+        self.type = type
 
         matplotlib.rcParams['font.sans-serif'] = ['SimHei']
 
@@ -25,13 +36,17 @@ class company_relationship(object):
     def short_to_full(self, text):
         return [list(self.name_dict.keys())[list(self.name_dict.values()).index(word)] if word in self.name_dict.values() and word != "nan" else word for word in text]
 
-
     def relation_count(self, text):
         if len(text) == 0:
             return
+        if self.type == 0:
+            names = self.name_dict.keys()
+        elif self.type == 1:
+            names = self.competitor_name
+
         for name_0 in self.name_dict.keys():
             if name_0 in text:
-                for name_1 in self.name_dict.keys():
+                for name_1 in names:
                     if name_1 in text and name_0 != name_1 and (name_1, name_0) not in self.relations:
                         self.relations[(name_0, name_1)] = self.relations.get((name_0, name_1), 0) + 1
 
@@ -70,4 +85,5 @@ class company_relationship(object):
 
         plt.axis('off')
         plt.title("公司关系图谱")
+        plt.savefig("data_output/公司关系图谱.jpg")
         plt.show()

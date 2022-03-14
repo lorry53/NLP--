@@ -6,7 +6,7 @@ import jieba
 from bs4 import BeautifulSoup
 import pandas as pd
 import filter_sensitive_words as filter
-import math
+
 
 class preprocess(object):
 
@@ -30,12 +30,13 @@ class preprocess(object):
         for word in self.name_dict.values():
             if str(word) != "nan":
                 jieba.add_word(word)
+
         # with open(r"data_source/白名单.txt", "r", encoding='UTF-8') as f:
         #     for line in f.readlines():
         #         jieba.add_word(line.strip('\n'))
 
 
-    # 读入头条新闻数据。match=True表示只匹配战略客户信息
+    # 读入新闻数据
     def read_doc(self, doc_name):
         df = pd.read_csv(doc_name)
         df["content"] = df["1, 1000"].str.cat(
@@ -57,11 +58,11 @@ class preprocess(object):
         soup = BeautifulSoup(corpus, 'lxml')
         clean_string = ""
 
-        if doc_type == "title_news":
+        if doc_type == 0:
             for item in soup.find_all("p"):
                 clean_string += item.get_text()
 
-        if doc_type == "pubnote":
+        if doc_type == 1:
             for item in soup.find_all("div"):
                 clean_string += item.get_text()
 
@@ -70,6 +71,7 @@ class preprocess(object):
 
     # 标记需要删除的文本
     def del_check(self, corpus):
+
         delete = 0
 
         # DFA算法检测敏感词
@@ -79,8 +81,6 @@ class preprocess(object):
         # 去除长度过短的文本
         if len(corpus) < 20:
             delete = 1
-        else:
-            delete = 0
 
         return delete
 
@@ -105,19 +105,19 @@ class preprocess(object):
     def filter_df(self, df: object, type: object, start_time: object = None, end_time: object = None, industry_list: object = None) -> object:
 
         if type == 0:
-            df_new = df[df['full_name'].isin(self.name_dict.keys())]
+            df_new = df[df['corp_abbr'].isin(self.name_dict.keys())]
             return df_new
 
         if type == 1:
-            df_new = df[(df['created_at'] >= start_time) & (df['created_at'] <= end_time)]
+            df_new = df[(df['show_time'] >= start_time) & (df['show_time'] <= end_time)]
             return df_new
 
         if type == 2:
-            df_new = df[df['full_name'].isin(industry_list)]
+            df_new = df[df['corp_abbr'].isin(industry_list)]
             return df_new
 
 
     # 关联上公司基本信息
     def link_company_info(self, df):
-        return pd.merge(df, self.company_info[['data_value', 'full_name']], on=['data_value'], how='left')
+        return pd.merge(df, self.company_info, on=['corp_org_id'], how='left')
 
